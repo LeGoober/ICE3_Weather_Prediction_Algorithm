@@ -1,0 +1,49 @@
+<pm maxID="6" >
+	<pz n="bacon borders" ID="5" >
+		<t n="Bacon" p="-1,-121" />
+		<t n="Bacon" p="1,-96" />
+		<t n="Bacon" p="3,-65" />
+		<t n="Bacon" p="1,-45" />
+		<t n="Bacon" p="5,-10" />
+		<t n="Bacon" p="5,14" />
+		<t n="Bacon" p="8,40" />
+		<t n="Bacon" p="8,62" />
+		<t n="Bacon" p="14,103" />
+		<t n="Bacon" p="12,88" />
+		<t n="Bacon" p="4,-31" />
+		<t n="Bacon" p="3,-81" />
+		<t n="Bacon" p="-115,4" />
+		<t n="Bacon" p="-70,-4" />
+		<t n="Bacon" p="-36,-9" />
+		<t n="Bacon" p="53,-24" />
+		<t n="Bacon" p="101,-32" />
+		<t n="Bacon" p="121,-38" />
+		<t n="Meatball" p="-44,20" />
+		<t n="Meatball" p="-38,52" />
+		<t n="Meatball" p="-35,84" />
+		<t n="Meatball" p="-78,26" />
+		<t n="Meatball" p="-118,28" />
+		<t n="Meatball" p="-85,59" />
+		<t n="Cheese" p="50,-60" />
+		<t n="Cheese" p="50,-87" />
+		<t n="Cheese" p="44,-111" />
+		<t n="Cheese" p="72,-70" />
+		<t n="Cheese" p="101,-70" />
+		<t n="Cheese" p="77,-99" />
+		<t n="Pepperoni" p="46,9" />
+		<t n="Pepperoni" p="92,-2" />
+		<t n="Pepperoni" p="126,-6" />
+		<t n="Pepperoni" p="52,31" />
+		<t n="Pepperoni" p="61,54" />
+		<t n="Pepperoni" p="66,83" />
+		<t n="Pepperoni" p="90,24" />
+		<t n="Pepperoni" p="113,37" />
+		<t n="Olive" p="-51,-39" />
+		<t n="Olive" p="-55,-73" />
+		<t n="Olive" p="-58,-101" />
+		<t n="Olive" p="-88,-34" />
+		<t n="Olive" p="-111,-34" />
+		<t n="Olive" p="-83,-66" />
+		<t n="Olive" p="-99,-80" />
+	</pz>
+</pm>

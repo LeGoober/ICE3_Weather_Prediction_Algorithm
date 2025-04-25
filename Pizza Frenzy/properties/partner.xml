@@ -1,0 +1,11 @@
+<Properties>
+
+<String id="ProdName">PizzaFrenzy</String>
+<String id="DisplayName">Pizza Frenzy Deluxe</String>
+<String id="Offering">10181</String>
+<String id="RegistryKey">PopCap\PizzaFrenzy</String>
+
+<Integer id="Height">480</Integer>
+<Integer id="Width">640</Integer>
+
+</Properties>
