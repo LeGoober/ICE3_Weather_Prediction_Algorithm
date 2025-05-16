@@ -1,30 +1,23 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score
+import matplotlib.pyplot as plt
+import os
 
 # Data Cleaning and Preparation
-weather_classification_data = pd.read_csv('weather_classification_data.csv')  # Updated path
+weather_classification_data = pd.read_csv('weather_classification_data.csv')
 weather_classification_data.columns = [
-    "Temperature",
-    "Humidity",
-    "Wind Speed",
-    "Precipitation (%)",
-    "Cloud Cover",
-    "Atmospheric Pressure",
-    "UV Index",
-    "Season",
-    "Visibility (km)",
-    "Location",
-    "Weather Type"
+    "Temperature", "Humidity", "Wind Speed", "Precipitation (%)", "Cloud Cover",
+    "Atmospheric Pressure", "UV Index", "Season", "Visibility (km)", "Location", "Weather Type"
 ]
-
-new_weather_classification_data = weather_classification_data.drop("Atmospheric Pressure", axis=1)
-subset_weather_data = new_weather_classification_data.iloc[:100, :]
+weather_classification_data.drop("Atmospheric Pressure", axis=1, inplace=True)
+subset_weather_data = weather_classification_data.iloc[:500, :]  # Increased to 500 samples
 weather_classification_data_x = subset_weather_data.drop("Weather Type", axis=1)
 weather_classification_data_y = subset_weather_data["Weather Type"]
 
-# Convert categorical data to numerical where applicable
-weather_classification_data_x = pd.get_dummies(weather_classification_data_x, columns=["Cloud Cover", "Location"])
+# Convert categorical data to numerical
+weather_classification_data_x = pd.get_dummies(weather_classification_data_x, columns=["Cloud Cover", "Location", "Season"])
 weather_classification_data_y = weather_classification_data_y.astype('category').cat.codes
 
 # Split data
@@ -48,6 +41,11 @@ class DecisionTreeClassifier():
         self.min_samples_split = min_samples_split
         self.max_depth = max_depth
 
+    def entropy(self, y):
+        _, counts = np.unique(y, return_counts=True)
+        probabilities = counts / len(y)
+        return -np.sum(probabilities * np.log2(probabilities + 1e-10))  # Add small value to avoid log(0)
+
     def gini_index(self, y):
         _, counts = np.unique(y, return_counts=True)
         probabilities = counts / len(y)
@@ -58,9 +56,11 @@ class DecisionTreeClassifier():
         dataset_right = np.array([row for row in dataset if row[feature_index] > threshold])
         return dataset_left, dataset_right
 
-    def information_gain(self, parent, left, right):
+    def information_gain(self, parent, left, right, criterion='entropy'):
         weight_left = len(left) / len(parent)
         weight_right = len(right) / len(parent)
+        if criterion == 'entropy':
+            return self.entropy(parent) - (weight_left * self.entropy(left) + weight_right * self.entropy(right))
         return self.gini_index(parent) - (weight_left * self.gini_index(left) + weight_right * self.gini_index(right))
 
     def get_best_split(self, dataset, num_samples, num_features):
@@ -75,13 +75,15 @@ class DecisionTreeClassifier():
                     parent = dataset[:, -1]
                     left_y = dataset_left[:, -1]
                     right_y = dataset_right[:, -1]
-                    current_info_gain = self.information_gain(parent, left_y, right_y)
+                    current_info_gain = self.information_gain(parent, left_y, right_y, criterion='entropy')
                     if current_info_gain > max_info_gain:
-                        best_split['feature_index'] = feature_index
-                        best_split['threshold'] = threshold
-                        best_split['dataset_left'] = dataset_left
-                        best_split['dataset_right'] = dataset_right
-                        best_split['info_gain'] = current_info_gain
+                        best_split = {
+                            'feature_index': feature_index,
+                            'threshold': threshold,
+                            'dataset_left': dataset_left,
+                            'dataset_right': dataset_right,
+                            'info_gain': current_info_gain
+                        }
                         max_info_gain = current_info_gain
         return best_split
 
@@ -102,20 +104,119 @@ class DecisionTreeClassifier():
         self.root = self.build_tree(dataset)
 
     def predict(self, X):
-        predictions = [self.make_prediction(x, self.root) for x in X]
-        return np.array(predictions)
+        return np.array([self.make_prediction(x, self.root) for x in X])
 
     def make_prediction(self, x, tree):
         if tree.value is not None:
             return tree.value
-        feature_value = x[tree.feature_index]
-        if feature_value <= tree.threshold:
+        if x[tree.feature_index] <= tree.threshold:
             return self.make_prediction(x, tree.left)
         return self.make_prediction(x, tree.right)
 
-# Train and Evaluate
+# Train and Evaluate with Cross-Validation
 classifier = DecisionTreeClassifier(min_samples_split=3, max_depth=3)
 classifier.fit(X_train, y_train)
 y_pred = classifier.predict(X_test)
-accuracy = np.mean(y_pred == y_test)
-print(f"Accuracy: {accuracy:.2f}")
+
+# K-Fold Cross-Validation
+kf = KFold(n_splits=5, shuffle=True, random_state=41)
+cv_scores = []
+for train_index, val_index in kf.split(X):
+    X_train_cv, X_val_cv = X[train_index], X[val_index]
+    y_train_cv, y_val_cv = y[train_index], y[val_index]
+    classifier.fit(X_train_cv, y_train_cv)
+    y_pred_cv = classifier.predict(X_val_cv)
+    cv_scores.append(accuracy_score(y_val_cv, y_pred_cv))
+print(f"Cross-Validation Scores: {cv_scores}")
+print(f"Average CV Accuracy: {np.mean(cv_scores):.2f} (+/- {np.std(cv_scores) * 2:.2f})")
+
+# Evaluation Metrics
+cm = confusion_matrix(y_test, y_pred)
+print("Confusion Matrix:\n", cm)
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, average='weighted')
+recall = recall_score(y_test, y_pred, average='weighted')
+print(f"Test Accuracy: {accuracy:.2f}")
+print(f"Precision: {precision:.2f}")
+print(f"Recall: {recall:.2f}")
+
+# Create output directory
+os.makedirs('output/figures', exist_ok=True)
+
+# Visualizations
+plt.figure(figsize=(10, 6))
+plt.scatter(X_train[:, weather_classification_data_x.columns.get_loc("Temperature")],
+            X_train[:, weather_classification_data_x.columns.get_loc("Humidity")],
+            c=y_train, cmap='viridis')
+plt.colorbar(label='Weather Type (Encoded)')
+plt.xlabel('Temperature')
+plt.ylabel('Humidity')
+plt.title('Training Set: Temperature vs Humidity by Weather Type')
+plt.savefig('output/figures/training_temperature_humidity_scatter.png')
+plt.close()
+
+plt.figure(figsize=(10, 6))
+plt.plot(y_test, label='Actual Weather Type', marker='o')
+plt.plot(y_pred, label='Predicted Weather Type', marker='x')
+plt.xlabel('Test Sample Index')
+plt.ylabel('Weather Type (Encoded)')
+plt.title('Test Set: Actual vs Predicted Weather Types')
+plt.legend()
+plt.savefig('output/figures/test_actual_vs_predicted.png')
+plt.close()
+
+plt.figure(figsize=(10, 6))
+plt.plot(subset_weather_data.index[:500], subset_weather_data['Temperature'][:500], label='Temperature', color='blue')
+plt.xlabel('Sample Index')
+plt.ylabel('Temperature (°C)')
+plt.title('Temperature Distribution Across Dataset')
+plt.legend()
+plt.savefig('output/figures/temperature_distribution.png')
+plt.close()
+
+# Activity Recommendation Mapping
+weather_type_map = {0: "Sunny", 1: "Rainy", 2: "Snowy", 3: "Cloudy"}
+activity_map = {
+    "Sunny": ["Go to the beach", "Have a picnic", "Hike"],
+    "Rainy": ["Stay indoors", "Watch a movie", "Read a book"],
+    "Snowy": ["Build a snowman", "Go skiing", "Stay warm indoors"],
+    "Cloudy": ["Visit a museum", "Go for a walk", "Do indoor crafts"]
+}
+
+# User Input Functions
+def get_numeric_input(prompt):
+    while True:
+        try:
+            return float(input(prompt))
+        except ValueError:
+            print("Invalid input. Please enter a numeric value.")
+
+def get_user_input():
+    print("\nEnter weather conditions for activity recommendation or prediction:")
+    temp = get_numeric_input("Temperature (°C): ")
+    humid = get_numeric_input("Humidity (%): ")
+    wind = get_numeric_input("Wind Speed (km/h): ")
+    precip = get_numeric_input("Precipitation (%): ")
+    uv = get_numeric_input("UV Index: ")
+    vis = get_numeric_input("Visibility (km): ")
+    cloud = input("Cloud Cover (clear/partly cloudy/overcast): ").strip().lower()
+    loc = input("Location (e.g., coastal, inland): ").strip().lower()
+
+    user_data = pd.DataFrame([[temp, humid, wind, precip, uv, vis]], 
+                             columns=["Temperature", "Humidity", "Wind Speed", "Precipitation (%)", "UV Index", "Visibility (km)"])
+    user_data["Cloud Cover"] = cloud
+    user_data["Location"] = loc
+    user_data = pd.get_dummies(user_data, columns=["Cloud Cover", "Location"])
+    user_data = user_data.reindex(columns=weather_classification_data_x.columns, fill_value=0)
+    return user_data.values
+
+# Predict and Recommend Loop
+while True:
+    user_input = get_user_input()
+    pred_encoded = classifier.predict(user_input)[0]
+    pred_weather = weather_type_map.get(pred_encoded, "Unknown")
+    activities = activity_map.get(pred_weather, ["No recommendation"])
+    print(f"\nPredicted Weather: {pred_weather}")
+    print("Suggested Activities:", ", ".join(activities))
+    if input("\nWould you like to try again or exit? (yes/no): ").strip().lower() != 'yes':
+        break
