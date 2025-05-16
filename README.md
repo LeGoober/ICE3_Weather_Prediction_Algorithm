@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ICE3_Weather_Prediction_Algorithm
 Weather-Based Activity Recommender
 Overview
